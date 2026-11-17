@@ -1,0 +1,39 @@
+package com.acadence.repository;
+
+import com.acadence.model.Course;
+import com.acadence.model.CourseOffering;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.boot.spi.MetadataImplementor;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.repository.query.parser.PartTree;
+
+import static org.assertj.core.api.Assertions.assertThatCode;
+
+class CourseMappingTest {
+
+    @Test
+    void hibernateAcceptsCourseMappingsWithoutDatabaseAccess() {
+        var registry = new StandardServiceRegistryBuilder()
+                .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
+                .applySetting("hibernate.boot.allow_jdbc_metadata_access", false)
+                .build();
+        try {
+            var metadata = (MetadataImplementor) new MetadataSources(registry)
+                    .addAnnotatedClass(Course.class).addAnnotatedClass(CourseOffering.class).buildMetadata();
+            assertThatCode(metadata::validate).doesNotThrowAnyException();
+        } finally {
+            StandardServiceRegistryBuilder.destroy(registry);
+        }
+    }
+
+    @Test
+    void repositoryDerivedQueriesResolveEntityProperties() {
+        for (var method : CourseRepository.class.getDeclaredMethods()) {
+            assertThatCode(() -> new PartTree(method.getName(), Course.class)).doesNotThrowAnyException();
+        }
+        for (var method : CourseOfferingRepository.class.getDeclaredMethods()) {
+            assertThatCode(() -> new PartTree(method.getName(), CourseOffering.class)).doesNotThrowAnyException();
+        }
+    }
+}
